@@ -2,24 +2,20 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 
-// Configuración CORS más permisiva
+// Configuración CORS MUY permisiva para desarrollo
 app.use(cors({
-  origin: [
-    'https://brain-mri-frontend.onrender.com',
-    'http://localhost:5173', 
-    'http://localhost:3000'
-  ],
+  origin: '*',  // Permite todos los orígenes
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
+
+// Middleware para preflight
+app.options('*', cors());
 
 app.use(express.json());
 
-// Middleware para manejar preflight requests
-app.options('*', cors());
-
-// Ruta de salud
+// Ruta de salud - SIMPLE
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -31,21 +27,13 @@ app.get('/health', (req, res) => {
 // Ruta principal
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Brain MRI API',
-    endpoints: {
-      health: '/health',
-      stats: '/api/patients/stats/',
-      mask_stats: '/api/images/mask_stats/',
-      patients: '/api/patients/',
-      images: '/api/images/',
-      upload: '/api/upload-csv/'
-    }
+    message: 'Brain MRI API - Working!',
+    version: '1.0.0'
   });
 });
 
 // Ruta de estadísticas de pacientes
 app.get('/api/patients/stats/', (req, res) => {
-  console.log('📊 Stats endpoint called');
   res.json({
     total_patients: 150,
     total_images: 200,
@@ -56,7 +44,6 @@ app.get('/api/patients/stats/', (req, res) => {
 
 // Ruta de estadísticas de máscaras
 app.get('/api/images/mask_stats/', (req, res) => {
-  console.log('🎭 Mask stats endpoint called');
   res.json({
     mask_0: 50,
     mask_1: 150
@@ -65,19 +52,14 @@ app.get('/api/images/mask_stats/', (req, res) => {
 
 // Ruta de lista de pacientes
 app.get('/api/patients/', (req, res) => {
-  console.log('👥 Patients endpoint called');
   res.json([
     { id: 1, patient_id: "P001", image_count: 5, mask_count: 3 },
-    { id: 2, patient_id: "P002", image_count: 8, mask_count: 6 },
-    { id: 3, patient_id: "P003", image_count: 3, mask_count: 2 },
-    { id: 4, patient_id: "P004", image_count: 7, mask_count: 5 },
-    { id: 5, patient_id: "P005", image_count: 4, mask_count: 3 }
+    { id: 2, patient_id: "P002", image_count: 8, mask_count: 6 }
   ]);
 });
 
 // Ruta de lista de imágenes
 app.get('/api/images/', (req, res) => {
-  console.log('🖼️ Images endpoint called');
   res.json([
     { 
       id: 1, 
@@ -85,46 +67,19 @@ app.get('/api/images/', (req, res) => {
       image_path: "images/brain_001.png", 
       mask_path: "masks/mask_001.png", 
       mask: 1 
-    },
-    { 
-      id: 2, 
-      patient_id: "P002", 
-      image_path: "images/brain_002.png", 
-      mask_path: "masks/mask_002.png", 
-      mask: 0 
-    },
-    { 
-      id: 3, 
-      patient_id: "P003", 
-      image_path: "images/brain_003.png", 
-      mask_path: "masks/mask_003.png", 
-      mask: 1 
     }
   ]);
 });
 
-// Ruta para upload de CSV (sin multer)
+// Ruta para upload de CSV
 app.post('/api/upload-csv/', (req, res) => {
-  console.log('📁 Upload CSV endpoint called');
   res.json({
-    message: 'CSV upload functionality will be added soon',
-    status: 'success',
-    note: 'File upload not implemented yet'
-  });
-});
-
-// Manejo de rutas no encontradas
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Route not found',
-    path: req.originalUrl,
-    method: req.method,
-    available_endpoints: ['/health', '/api/patients/stats/', '/api/images/mask_stats/', '/api/patients/', '/api/images/']
+    message: 'CSV upload endpoint ready',
+    status: 'success'
   });
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`🚀 Brain MRI Backend running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
