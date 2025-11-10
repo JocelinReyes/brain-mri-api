@@ -1,0 +1,22 @@
+# Django
+*.pyc
+__pycache__/
+*.sqlite3
+.env
+*.log
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
