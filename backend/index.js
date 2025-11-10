@@ -6,7 +6,7 @@ const app = express();
 app.use(cors({
   origin: [
     'https://brain-mri-frontend.onrender.com',
-    'http://localhost:5173',
+    'http://localhost:5173', 
     'http://localhost:3000'
   ],
   credentials: true,
@@ -58,8 +58,8 @@ app.get('/api/patients/stats/', (req, res) => {
 app.get('/api/images/mask_stats/', (req, res) => {
   console.log('🎭 Mask stats endpoint called');
   res.json({
-    mask_0: 50,   // imágenes sin máscara
-    mask_1: 150   // imágenes con máscara
+    mask_0: 50,
+    mask_1: 150
   });
 });
 
@@ -103,12 +103,13 @@ app.get('/api/images/', (req, res) => {
   ]);
 });
 
-// Ruta para upload de CSV (sin multer por ahora)
+// Ruta para upload de CSV (sin multer)
 app.post('/api/upload-csv/', (req, res) => {
   console.log('📁 Upload CSV endpoint called');
   res.json({
-    message: 'CSV upload endpoint ready (multer not installed yet)',
-    status: 'upload_disabled'
+    message: 'CSV upload functionality will be added soon',
+    status: 'success',
+    note: 'File upload not implemented yet'
   });
 });
 
@@ -117,7 +118,8 @@ app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
     path: req.originalUrl,
-    method: req.method
+    method: req.method,
+    available_endpoints: ['/health', '/api/patients/stats/', '/api/images/mask_stats/', '/api/patients/', '/api/images/']
   });
 });
 
