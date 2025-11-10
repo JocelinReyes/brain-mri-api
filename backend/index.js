@@ -7,6 +7,19 @@ const BrainMRIModel = require('./ml/trainModel');
 const app = express();
 const mlModel = new BrainMRIModel();
 
+// Configuración CORS MUY permisiva - Permitir todos los orígenes
+app.use(cors({
+  origin: '*',  // Permitir todos los orígenes
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length', 'X-Requested-With', 'Accept']
+}));
+
+// Middleware para preflight requests
+app.options('*', cors());
+
+app.use(express.json());
+
 // Configuración de multer para uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -30,23 +43,6 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB límite
   }
 });
-
-// Configuración CORS
-app.use(cors({
-  origin: [
-    'https://brain-mri-frontend.onrender.com',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json());
-
-// Middleware para preflight requests
-app.options('*', cors());
 
 // Ruta de salud
 app.get('/health', (req, res) => {
@@ -175,6 +171,7 @@ app.post('/api/train-model', upload.single('training_data'), async (req, res) =>
     
     // Limpiar archivo temporal
     try {
+      const fs = require('fs-extra');
       await fs.remove(req.file.path);
       console.log('🧹 Archivo temporal limpiado');
     } catch (cleanupError) {
@@ -264,11 +261,20 @@ app.use((error, req, res, next) => {
       return res.status(400).json({ error: 'El archivo es demasiado grande. Límite: 10MB' });
     }
   }
+  
+  // Asegurar headers CORS incluso en errores
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  
   res.status(500).json({ error: error.message });
 });
 
 // Manejo de rutas no encontradas
 app.use('*', (req, res) => {
+  // Asegurar headers CORS incluso en 404
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  
   res.status(404).json({
     error: 'Route not found',
     path: req.originalUrl,
@@ -292,4 +298,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Brain MRI Backend with ML running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`📍 Frontend: https://brain-mri-frontend.onrender.com`);
+  console.log(`🔧 CORS configurado para permitir todos los orígenes`);
 });
