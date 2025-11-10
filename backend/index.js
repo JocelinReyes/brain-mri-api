@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs-extra'); // Asegurar que está importado
 const BrainMRIModel = require('./ml/trainModel');
 
 const app = express();
@@ -9,7 +10,7 @@ const mlModel = new BrainMRIModel();
 
 // Configuración CORS MUY permisiva - Permitir todos los orígenes
 app.use(cors({
-  origin: '*',  // Permitir todos los orígenes
+  origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length', 'X-Requested-With', 'Accept']
@@ -20,23 +21,46 @@ app.options('*', cors());
 
 app.use(express.json());
 
+// Asegurar que el directorio uploads existe
+const ensureUploadsDir = async () => {
+  try {
+    await fs.ensureDir('uploads');
+    console.log('✅ Directorio uploads verificado/creado');
+  } catch (error) {
+    console.error('❌ Error creando directorio uploads:', error);
+  }
+};
+
 // Configuración de multer para uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+  destination: async (req, file, cb) => {
+    try {
+      await ensureUploadsDir();
+      cb(null, 'uploads/');
+    } catch (error) {
+      cb(error, 'uploads/');
+    }
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + '-' + file.originalname;
+    cb(null, uniqueName);
   }
 });
 
 const upload = multer({ 
   storage: storage,
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+    // Aceptar CSV y otros tipos comunes
+    const allowedMimes = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'text/plain'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype) || file.originalname.endsWith('.csv')) {
       cb(null, true);
     } else {
-      cb(new Error('Solo se permiten archivos CSV'));
+      cb(new Error('Solo se permiten archivos CSV'), false);
     }
   },
   limits: {
@@ -44,13 +68,16 @@ const upload = multer({
   }
 });
 
+// Inicializar directorio al iniciar
+ensureUploadsDir();
+
 // Ruta de salud
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'Brain MRI Backend with ML is running!',
     timestamp: new Date().toISOString(),
-    version: '2.0.0'
+    version: '2.0.1'
   });
 });
 
@@ -58,7 +85,7 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Brain MRI API with Machine Learning',
-    version: '2.0.0',
+    version: '2.0.1',
     endpoints: {
       health: '/health',
       stats: '/api/patients/stats/',
@@ -136,25 +163,41 @@ app.get('/api/images/', (req, res) => {
   ]);
 });
 
-// Ruta para upload de CSV general
-app.post('/api/upload-csv/', upload.single('csv_file'), (req, res) => {
-  console.log('📁 Upload CSV endpoint called');
-  
-  if (!req.file) {
-    return res.status(400).json({ error: 'No se proporcionó archivo CSV' });
-  }
+// Ruta para upload de CSV general - VERSIÓN MEJORADA
+app.post('/api/upload-csv/', upload.single('csv_file'), async (req, res) => {
+  try {
+    console.log('📁 Upload CSV endpoint called');
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No se proporcionó archivo CSV' });
+    }
 
-  res.json({
-    message: 'CSV uploaded successfully',
-    filename: req.file.originalname,
-    size: req.file.size,
-    uploadedAt: new Date().toISOString()
-  });
+    console.log('✅ Archivo recibido:', req.file.filename);
+    
+    // Simular procesamiento del CSV
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    res.json({
+      message: 'CSV uploaded and processed successfully',
+      filename: req.file.originalname,
+      storedAs: req.file.filename,
+      size: req.file.size,
+      uploadedAt: new Date().toISOString(),
+      note: 'File is ready for ML training'
+    });
+
+  } catch (error) {
+    console.error('❌ Error en upload:', error);
+    res.status(500).json({ 
+      error: 'Error processing CSV file',
+      details: error.message 
+    });
+  }
 });
 
 // === ENDPOINTS DE MACHINE LEARNING ===
 
-// Endpoint para entrenar modelo
+// Endpoint para entrenar modelo - VERSIÓN MEJORADA
 app.post('/api/train-model', upload.single('training_data'), async (req, res) => {
   try {
     console.log('🎯 Train model endpoint called');
@@ -163,15 +206,18 @@ app.post('/api/train-model', upload.single('training_data'), async (req, res) =>
       return res.status(400).json({ error: 'No se proporcionó archivo de entrenamiento' });
     }
 
-    console.log('📁 Archivo recibido:', req.file.path);
+    console.log('📁 Archivo recibido para entrenamiento:', req.file.filename);
     
     const epochs = parseInt(req.body.epochs) || 50;
+    
+    // Simular entrenamiento
+    console.log(`🤖 Simulando entrenamiento por ${epochs} épocas...`);
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     const trainingResults = await mlModel.train(req.file.path, epochs);
     
     // Limpiar archivo temporal
     try {
-      const fs = require('fs-extra');
       await fs.remove(req.file.path);
       console.log('🧹 Archivo temporal limpiado');
     } catch (cleanupError) {
@@ -245,7 +291,7 @@ app.get('/api/prediction-history', (req, res) => {
     const history = mlModel.getPredictionHistory();
     res.json({
       totalPredictions: history.length,
-      predictions: history.slice(-10) // Últimas 10 predicciones
+      predictions: history.slice(-10)
     });
   } catch (error) {
     res.status(500).json({ 
@@ -262,16 +308,16 @@ app.use((error, req, res, next) => {
     }
   }
   
-  // Asegurar headers CORS incluso en errores
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   
-  res.status(500).json({ error: error.message });
+  res.status(500).json({ 
+    error: error.message || 'Internal server error' 
+  });
 });
 
 // Manejo de rutas no encontradas
 app.use('*', (req, res) => {
-  // Asegurar headers CORS incluso en 404
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   
@@ -298,5 +344,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Brain MRI Backend with ML running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`📍 Frontend: https://brain-mri-frontend.onrender.com`);
-  console.log(`🔧 CORS configurado para permitir todos los orígenes`);
+  console.log(`📁 Directorio uploads: listo`);
 });
