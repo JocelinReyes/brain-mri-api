@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
 const app = express();
 
 // Configuración CORS más permisiva
@@ -16,9 +15,6 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
-// Configuración de multer para upload de archivos
-const upload = multer({ dest: 'uploads/' });
 
 // Middleware para manejar preflight requests
 app.options('*', cors());
@@ -107,14 +103,12 @@ app.get('/api/images/', (req, res) => {
   ]);
 });
 
-// Ruta para upload de CSV
-app.post('/api/upload-csv/', upload.single('csv_file'), (req, res) => {
+// Ruta para upload de CSV (sin multer por ahora)
+app.post('/api/upload-csv/', (req, res) => {
   console.log('📁 Upload CSV endpoint called');
   res.json({
-    message: 'CSV uploaded successfully',
-    rows_processed: 25,
-    status: 'completed',
-    filename: req.file ? req.file.originalname : 'No file'
+    message: 'CSV upload endpoint ready (multer not installed yet)',
+    status: 'upload_disabled'
   });
 });
 
@@ -131,5 +125,4 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Brain MRI Backend running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`📍 Frontend URL: https://brain-mri-frontend.onrender.com`);
 });
