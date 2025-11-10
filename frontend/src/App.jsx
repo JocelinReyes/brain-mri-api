@@ -12,7 +12,7 @@ import {
 
 ChartJS.register(ArcElement, Title, Tooltip, Legend);
 
-const API_BASE_URL = 'https://brain-mri-backend.onrender.com/api';
+const API_BASE_URL = 'https://brain-mri-api.onrender.com/api';
 
 // Interceptor para debug
 axios.interceptors.response.use(
